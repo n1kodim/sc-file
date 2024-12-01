@@ -228,13 +228,17 @@ class McsaDecoder(FileDecoder[McsaFileIO, ModelData]):
 
     def _parse_bone_packed(self):
         for v in self.mesh.vertices:
+            v.bone_count = self.count.max_links
             for i in range(2):
                 v.bone_ids[i] = self.mesh.bones[self.f.readb(F.U8)]
             for i in range(2):
                 v.bone_weights[i] = self.f.readb(F.U8) / 255
+            v.bone_ids[2] = 0
+            v.bone_weights[2] = 0
 
     def _parse_bone_plains(self):
         for v in self.mesh.vertices:
+            v.bone_count = self.count.max_links
             for i in range(4):
                 v.bone_ids[i] = self.mesh.bones[self.f.readb(F.U8)]
                 

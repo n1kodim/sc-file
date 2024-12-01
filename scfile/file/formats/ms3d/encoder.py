@@ -1,3 +1,4 @@
+import math
 from scfile.consts import McsaModel
 from scfile.enums import FileSuffix
 from scfile.enums import StructFormat as F
@@ -59,8 +60,8 @@ class Ms3dBinEncoder(FileEncoder[ModelData]):
                 pos = v.position
                 # i8 flags, f32 pos[3], i8 bone id, u8 reference count
                 self.b.writeb(F.I8 + (F.F32 * 3), 0, pos.x, pos.y, pos.z)
-                if len(v.bone_ids) > 0:
-                    self.b.writeb(F.I8, list(v.bone_ids.values())[0])
+                if v.bone_count > 0:
+                    self.b.writeb(F.I8, v.bone_ids[0])
                 else:
                     self.b.writeb(F.I8, 0xFF)
 
@@ -183,26 +184,26 @@ class Ms3dBinEncoder(FileEncoder[ModelData]):
         for mesh in self.meshes:
             for v in mesh.vertices:
                 # boneIds 0
-                if len(v.bone_ids.keys()) > 1:
-                    self.b.writeb(F.I8, list(v.bone_ids.values())[1]) 
+                if v.bone_count > 1:
+                    self.b.writeb(F.U8, v.bone_ids[1]) 
                 else:
-                    self.b.writeb(F.U8, 0xFF)
+                    self.b.writeb(F.U8, 0)
 
                 # boneIds 1
-                if len(v.bone_ids.keys()) > 2:
-                    self.b.writeb(F.I8, list(v.bone_ids.values())[2])
+                if v.bone_count > 2:
+                    self.b.writeb(F.U8, v.bone_ids[2]) 
                 else:
-                    self.b.writeb(F.U8, 0xFF) 
+                    self.b.writeb(F.U8, 0) 
 
                 # boneIds 2
-                if len(v.bone_ids.keys()) > 3:
-                    self.b.writeb(F.I8, list(v.bone_ids.values())[3])
+                if v.bone_count > 3:
+                    self.b.writeb(F.U8, v.bone_ids[3]) 
                 else:
-                    self.b.writeb(F.U8, 0xFF)
+                    self.b.writeb(F.U8, 0)
                 
-                self.b.writeb(F.I8, int(v.bone_weights[0] * 100)) # weights 0
-                self.b.writeb(F.I8, int(v.bone_weights[1] * 100)) # weights 1
-                self.b.writeb(F.I8, int(v.bone_weights[2] * 100)) # weights 2
+                self.b.writeb(F.I8, int(math.floor(v.bone_weights[0] * 100))) # weights 0
+                self.b.writeb(F.I8, int(math.floor(v.bone_weights[1] * 100))) # weights 1
+                self.b.writeb(F.I8, int(math.floor(v.bone_weights[2] * 100))) # weights 2
                 
                 self.b.writeb(F.I32, 0) # extra
 
