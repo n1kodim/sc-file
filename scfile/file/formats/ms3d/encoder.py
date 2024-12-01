@@ -25,6 +25,8 @@ class Ms3dBinEncoder(FileEncoder[ModelData]):
         self._add_groups()
         self._add_materials()
         self._add_joints()
+        self._add_additional_info()
+        self._add_weights()
 
     def _add_header(self):
         self.b.writes("MS3D000000")  # 10 bytes signature
@@ -33,12 +35,38 @@ class Ms3dBinEncoder(FileEncoder[ModelData]):
     def _add_vertices(self):
         self.b.writeb(F.U16, self.model.total_vertices)
 
+        vertex_refs = [0] * self.model.total_vertices
+        for mesh in self.meshes:
+            for p in mesh.polygons:
+                if vertex_refs[p.a] == 0xFF:
+                    print("To many references")
+                else:
+                    vertex_refs[p.a] = vertex_refs[p.a] + 1
+
+                if vertex_refs[p.b] == 0xFF:
+                    print("To many references")
+                else:
+                    vertex_refs[p.b] = vertex_refs[p.b] + 1
+                
+                if vertex_refs[p.c] == 0xFF:
+                    print("To many references")
+                else:
+                    vertex_refs[p.c] = vertex_refs[p.c] + 1
+
+        cur_id = 0
         for mesh in self.meshes:
             for v in mesh.vertices:
                 pos = v.position
                 # i8 flags, f32 pos[3], i8 bone id, u8 reference count
-                # TODO: reference count
-                self.b.writeb(F.I8 + (F.F32 * 3) + F.I8 + F.U8, 0, pos.x, pos.y, pos.z, -1, 0xFF)
+                self.b.writeb(F.I8 + (F.F32 * 3), 0, pos.x, pos.y, pos.z)
+                if len(v.bone_ids) > 0:
+                    self.b.writeb(F.I8, list(v.bone_ids.values())[0])
+                else:
+                    self.b.writeb(F.I8, 0xFF)
+
+                self.b.writeb(F.U8, int(vertex_refs[cur_id]))
+
+                cur_id = cur_id + 1
 
     def _add_triangles(self):
         self.b.writeb(F.U16, self.model.total_polygons)
@@ -142,6 +170,41 @@ class Ms3dBinEncoder(FileEncoder[ModelData]):
 
             self.b.writeb(F.U16, 0)  # count keyframes rotation
             self.b.writeb(F.U16, 0)  # count keyframes transition
+
+    def _add_additional_info(self):
+        self.b.writeb(F.I32, 1) # commentsVersion 1
+        self.b.writeb(F.I32, 0) # nNumGroupComments
+        self.b.writeb(F.I32, 0) # nNumMaterialComments
+        self.b.writeb(F.I32, 0) # nNumJointComments
+        self.b.writeb(F.I32, 0) # nNumHasModelComment
+        self.b.writeb(F.I32, 2) # weightsVersion
+
+    def _add_weights(self):
+        for mesh in self.meshes:
+            for v in mesh.vertices:
+                # boneIds 0
+                if len(v.bone_ids.keys()) > 1:
+                    self.b.writeb(F.I8, list(v.bone_ids.values())[1]) 
+                else:
+                    self.b.writeb(F.U8, 0xFF)
+
+                # boneIds 1
+                if len(v.bone_ids.keys()) > 2:
+                    self.b.writeb(F.I8, list(v.bone_ids.values())[2])
+                else:
+                    self.b.writeb(F.U8, 0xFF) 
+
+                # boneIds 2
+                if len(v.bone_ids.keys()) > 3:
+                    self.b.writeb(F.I8, list(v.bone_ids.values())[3])
+                else:
+                    self.b.writeb(F.U8, 0xFF)
+                
+                self.b.writeb(F.I8, int(v.bone_weights[0] * 100)) # weights 0
+                self.b.writeb(F.I8, int(v.bone_weights[1] * 100)) # weights 1
+                self.b.writeb(F.I8, int(v.bone_weights[2] * 100)) # weights 2
+                
+                self.b.writeb(F.I32, 0) # extra
 
     def _fixedlen(self, name: str) -> bytes:
         return name.encode("utf-8").ljust(32, b"\x00")

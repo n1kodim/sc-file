@@ -218,23 +218,43 @@ class McsaDecoder(FileDecoder[McsaFileIO, ModelData]):
             case 0:
                 pass
             case 1 | 2:
-                self._skip_vertices(size=4)
+                #self._skip_vertices(size=4)
+                self._parse_bone_packed()
             case 3 | 4:
-                self._skip_vertices(size=8)
+                #self._skip_vertices(size=8)
+                self._parse_bone_plains()
             case _:
                 raise exc.McsaUnknownLinkCount(self.path, self.count.max_links)
 
-    def _parse_packed_links(self):
-        linkids, linkweights = self.f.readlinkspacked(self.count.vertices, self.mesh.bones)
+    def _parse_bone_packed(self):
+        for v in self.mesh.vertices:
+            for i in range(2):
+                v.bone_ids[i] = self.mesh.bones[self.f.readb(F.U8)]
+            for i in range(2):
+                v.bone_weights[i] = self.f.readb(F.U8) / 255
 
-        for vertex, ids, weights in zip(self.vertices, linkids, linkweights):
-            vertex.link = dict(zip(ids, weights))
+    def _parse_bone_plains(self):
+        for v in self.mesh.vertices:
+            for i in range(4):
+                v.bone_ids[i] = self.mesh.bones[self.f.readb(F.U8)]
+                
+        for v in self.mesh.vertices:
+            for i in range(4):
+                v.bone_weights[i] = self.f.readb(F.U8) / 255
 
-    def _parse_plains_links(self):
-        linkids, linkweights = self.f.readlinksplains(self.count.vertices, self.mesh.bones)
+    # Read links with zip (idk how to link links with vertexes)
+    
+    # def _parse_packed_links(self):
+    #     linkids, linkweights = self.f.readlinkspacked(self.count.vertices, self.mesh.bones)
 
-        for vertex, ids, weights in zip(self.vertices, linkids, linkweights):
-            vertex.link = dict(zip(ids, weights))
+    #     for vertex, ids, weights in zip(self.vertices, linkids, linkweights):
+    #         vertex.link = dict(zip(ids, weights))
+
+    # def _parse_plains_links(self):
+    #     linkids, linkweights = self.f.readlinksplains(self.count.vertices, self.mesh.bones)
+
+    #     for vertex, ids, weights in zip(self.vertices, linkids, linkweights):
+    #         vertex.link = dict(zip(ids, weights))
 
     def _parse_colors(self):
         # Quite useless

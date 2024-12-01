@@ -49,15 +49,16 @@ class Ms3dAsciiEncoder(FileEncoder[ModelData]):
 
     def _add_vertices(self, mesh: Mesh):
         self.b.writes(f"{len(mesh.vertices)}\n")
-        self.b.writes(
-            "\n".join(
-                [
-                    f"0 {v.position.x} {v.position.y} {v.position.z} {v.texture.u} {v.texture.v} {McsaModel.ROOT_BONE_ID}"
-                    for v in mesh.vertices
-                ]
-            )
-        )
-        self.b.writes("\n")
+        # Add bone id
+        for v in mesh.vertices:
+            id = -1
+            weight = 0
+            for key, value in v.bone_ids.items():
+                if v.bone_weights[key] > weight:
+                    id = value
+                    weight = v.bone_weights[key]
+                    
+            self.b.writes(f"0 {v.position.x} {v.position.y} {v.position.z} {v.texture.u} {v.texture.v} {id}\n")
 
     def _add_normals(self, mesh: Mesh):
         self.b.writes(f"{len(mesh.vertices)}\n")

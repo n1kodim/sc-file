@@ -9,7 +9,9 @@ class Vertex:
     position: Vector = field(default_factory=Vector)
     texture: Texture = field(default_factory=Texture)
     normals: Vector = field(default_factory=Vector)
-    link: Dict[int, float] = field(default_factory=dict)
+    #link: Dict[int, float] = field(default_factory=dict)
+    bone_ids: Dict[int, int] = field(default_factory=dict)
+    bone_weights: Dict[int, float] = field(default_factory=dict)
     """key: bone id, value: weight"""
     # color: Color = field(default_factory=Color)
 
